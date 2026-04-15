@@ -1,0 +1,6 @@
+node_modules/
+.env
+*.pdf
+coverage/
+.nyc_output/
+dist/
