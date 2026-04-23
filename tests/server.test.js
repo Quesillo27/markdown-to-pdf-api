@@ -143,6 +143,15 @@ describe('POST /convert — HTML format', () => {
     expect(res.status).toBe(200);
     expect(res.type).toMatch(/html/);
   });
+
+  test('escapes the HTML title before rendering', async () => {
+    const res = await request(app)
+      .post('/convert?format=html')
+      .send({ markdown: '# Safe', options: { title: '<script>alert(1)</script>' } });
+    expect(res.status).toBe(200);
+    expect(res.text).toContain('&lt;script&gt;alert(1)&lt;/script&gt;');
+    expect(res.text).not.toContain('<title><script>alert(1)</script></title>');
+  });
 });
 
 describe('POST /convert — text format', () => {
@@ -175,6 +184,14 @@ describe('POST /convert — PDF format', () => {
       .send({ markdown: '# Dark Title', options: { theme: 'dark' } });
     expect(res.status).toBe(200);
     expect(res.headers['content-type']).toMatch(/pdf/);
+  }, 15000);
+
+  test('sanitizes the download filename and preserves pdf extension', async () => {
+    const res = await request(app)
+      .post('/convert')
+      .send({ markdown: '# Report', options: { filename: 'quarterly\nreport' } });
+    expect(res.status).toBe(200);
+    expect(res.headers['content-disposition']).toContain('filename="quarterly report.pdf"');
   }, 15000);
 });
 

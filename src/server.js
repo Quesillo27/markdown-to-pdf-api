@@ -79,9 +79,11 @@ app.post('/convert', async (req, res) => {
       author: options.author || 'markdown-to-pdf-api',
     });
 
+    const downloadFilename = sanitizeDownloadFilename(options.filename);
+
     res.set({
       'Content-Type': 'application/pdf',
-      'Content-Disposition': `attachment; filename="${options.filename || 'document.pdf'}"`,
+      'Content-Disposition': `attachment; filename="${downloadFilename}"`,
       'Content-Length': pdfBuffer.length,
     });
     return res.send(pdfBuffer);
@@ -130,7 +132,34 @@ function wrapHtml(content, theme, title) {
     minimal: 'body{font-family:"Helvetica Neue",Helvetica,Arial,sans-serif;max-width:700px;margin:0 auto;padding:3em;color:#444;line-height:1.7}h1,h2,h3{font-weight:300}code{font-family:monospace;background:#f9f9f9;padding:2px 5px}pre{background:#f9f9f9;padding:1em;overflow-x:auto}blockquote{border-left:2px solid #ddd;margin:0;padding-left:1em;color:#777}',
   };
   const css = themes[theme] || themes.default;
-  return `<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${title || 'Document'}</title><style>${css}</style></head><body>${content}</body></html>`;
+  return `<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${escapeHtml(title || 'Document')}</title><style>${css}</style></head><body>${content}</body></html>`;
+}
+
+function escapeHtml(value) {
+  return String(value)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
+function sanitizeDownloadFilename(filename) {
+  if (typeof filename !== 'string') {
+    return 'document.pdf';
+  }
+
+  const cleaned = filename
+    .replace(/[\r\n]/g, ' ')
+    .replace(/[\\/]/g, '-')
+    .replace(/\s+/g, ' ')
+    .trim();
+
+  if (!cleaned) {
+    return 'document.pdf';
+  }
+
+  return cleaned.toLowerCase().endsWith('.pdf') ? cleaned : `${cleaned}.pdf`;
 }
 
 // Start server

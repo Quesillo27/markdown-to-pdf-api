@@ -66,6 +66,10 @@ curl -X POST http://localhost:3000/analyze \
 
 **Query params:** `format=pdf|html|text` y `theme=default|dark|github|minimal`
 
+Notas:
+- `options.title` se escapa antes de insertarse en la vista HTML.
+- `options.filename` se normaliza para evitar caracteres inseguros y asegurar extension `.pdf`.
+
 **Respuestas:**
 - `format=pdf` → `application/pdf` (buffer descargable)
 - `format=html` → `text/html` (pagina completa con CSS inline)

@@ -42,6 +42,7 @@ function parseTokens(markdown) {
   let inCode = false;
   let codeBuffer = [];
   let codeLanguage = '';
+  const orderedCounters = [];
 
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i];
@@ -90,7 +91,8 @@ function parseTokens(markdown) {
     const ulMatch = line.match(/^(\s*)[-*+]\s+(.+)/);
     if (ulMatch) {
       const indent = Math.floor(ulMatch[1].length / 2);
-      tokens.push({ type: 'li', content: stripInline(ulMatch[2]), indent });
+      orderedCounters.length = indent;
+      tokens.push({ type: 'li', content: stripInline(ulMatch[2]), indent, marker: '•' });
       continue;
     }
 
@@ -98,7 +100,15 @@ function parseTokens(markdown) {
     const olMatch = line.match(/^(\s*)\d+\.\s+(.+)/);
     if (olMatch) {
       const indent = Math.floor(olMatch[1].length / 2);
-      tokens.push({ type: 'li', content: stripInline(olMatch[2]), indent, ordered: true });
+      orderedCounters.length = indent + 1;
+      orderedCounters[indent] = (orderedCounters[indent] || 0) + 1;
+      tokens.push({
+        type: 'li',
+        content: stripInline(olMatch[2]),
+        indent,
+        ordered: true,
+        marker: `${orderedCounters[indent]}.`,
+      });
       continue;
     }
 
@@ -162,8 +172,6 @@ function generatePdf(markdown, options = {}) {
 
     const tokens = parseTokens(markdown);
     const pageWidth = doc.page.width - 144; // margins both sides
-    let listCounter = 0;
-
     for (const token of tokens) {
       switch (token.type) {
         case 'h1':
@@ -231,7 +239,7 @@ function generatePdf(markdown, options = {}) {
 
         case 'li': {
           const xOffset = 72 + token.indent * 16;
-          const bullet = token.ordered ? '•' : '•';
+          const bullet = token.marker || '•';
           doc.fontSize(SIZES.body)
              .fillColor(theme.body)
              .font('Helvetica')
