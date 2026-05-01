@@ -1,12 +1,12 @@
 {
   "name": "markdown-to-pdf-api",
-  "version": "1.0.0",
+  "version": "1.1.1",
   "description": "REST API that converts Markdown to PDF or HTML with multiple CSS themes",
   "main": "src/server.js",
   "scripts": {
     "start": "node src/server.js",
     "dev": "nodemon src/server.js",
-    "test": "node --experimental-vm-modules node_modules/.bin/jest --forceExit --testTimeout=15000"
+    "test": "jest --runInBand --testTimeout=15000"
   },
   "keywords": ["markdown", "pdf", "api", "converter"],
   "author": "Quesillo27",

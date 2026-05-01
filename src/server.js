@@ -7,14 +7,23 @@ const { generatePdf, THEMES } = require('./pdfGenerator');
 const app = express();
 const PORT = process.env.PORT || 3000;
 const VALID_THEMES = Object.keys(THEMES);
+const APP_VERSION = '1.1.1';
 
 // Middleware
 app.use(express.json({ limit: '2mb' }));
 app.use(express.text({ type: 'text/markdown', limit: '2mb' }));
 
+app.use((err, req, res, next) => {
+  if (err instanceof SyntaxError && err.status === 400 && 'body' in err) {
+    return res.status(400).json({ error: 'Invalid JSON body' });
+  }
+
+  return next(err);
+});
+
 // Health check
 app.get('/health', (req, res) => {
-  res.json({ status: 'ok', version: '1.0.0', themes: VALID_THEMES });
+  res.json({ status: 'ok', version: APP_VERSION, themes: VALID_THEMES });
 });
 
 // List available themes
@@ -58,7 +67,7 @@ app.post('/convert', async (req, res) => {
     if (!['pdf', 'html', 'text'].includes(format)) {
       return res.status(400).json({ error: 'Invalid format. Use: pdf, html, text' });
     }
-    if (!VALID_THEMES.includes(theme) && format === 'pdf') {
+    if (!VALID_THEMES.includes(theme)) {
       return res.status(400).json({ error: `Invalid theme. Use: ${VALID_THEMES.join(', ')}` });
     }
 

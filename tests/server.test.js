@@ -77,6 +77,7 @@ describe('GET /health', () => {
     const res = await request(app).get('/health');
     expect(res.status).toBe(200);
     expect(res.body.status).toBe('ok');
+    expect(res.body.version).toBe('1.1.1');
     expect(Array.isArray(res.body.themes)).toBe(true);
   });
 });
@@ -134,6 +135,14 @@ describe('POST /convert — HTML format', () => {
       .send({ markdown: '# GitHub style' });
     expect(res.status).toBe(200);
     expect(res.type).toMatch(/html/);
+  });
+
+  test('returns 400 for invalid theme in HTML too', async () => {
+    const res = await request(app)
+      .post('/convert?format=html&theme=neon')
+      .send({ markdown: '# Invalid theme' });
+    expect(res.status).toBe(400);
+    expect(res.body.error).toMatch(/Invalid theme/);
   });
 
   test('accepts markdown in options object', async () => {
@@ -196,6 +205,15 @@ describe('POST /convert — PDF format', () => {
 });
 
 describe('POST /convert — validation', () => {
+  test('returns JSON 400 for malformed JSON body', async () => {
+    const res = await request(app)
+      .post('/convert')
+      .set('Content-Type', 'application/json')
+      .send('{"markdown": }');
+    expect(res.status).toBe(400);
+    expect(res.body).toEqual({ error: 'Invalid JSON body' });
+  });
+
   test('returns 400 for empty body', async () => {
     const res = await request(app)
       .post('/convert')
