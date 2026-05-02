@@ -4,7 +4,7 @@
 
 API REST que convierte Markdown a PDF, HTML o texto plano. Soporta 4 temas de estilo (default, dark, github, minimal). Sin dependencias de Chromium — generacion de PDF pura con pdfkit.
 
-Version actual: `1.1.1`
+Version actual: `1.1.2`
 
 ## Instalacion en 3 comandos
 
@@ -70,9 +70,10 @@ curl -X POST http://localhost:3000/analyze \
 
 Notas:
 - `options.title` se escapa antes de insertarse en la vista HTML.
-- `options.filename` se normaliza para evitar caracteres inseguros y asegurar extension `.pdf`.
+- `options.filename` se normaliza para evitar caracteres inseguros, comillas problemáticas en `Content-Disposition` y asegurar extension `.pdf`.
 - `theme` ahora se valida estrictamente tanto para `pdf` como para `html`.
 - JSON malformado responde `400 {"error":"Invalid JSON body"}` en lugar del HTML por defecto de Express.
+- `markdown` vacío responde `400` y contenido mayor a `500KB` responde `413` tanto en `/convert` como en `/analyze`.
 
 **Respuestas:**
 - `format=pdf` → `application/pdf` (buffer descargable)

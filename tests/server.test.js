@@ -77,7 +77,7 @@ describe('GET /health', () => {
     const res = await request(app).get('/health');
     expect(res.status).toBe(200);
     expect(res.body.status).toBe('ok');
-    expect(res.body.version).toBe('1.1.1');
+    expect(res.body.version).toBe('1.1.2');
     expect(Array.isArray(res.body.themes)).toBe(true);
   });
 });
@@ -202,6 +202,14 @@ describe('POST /convert — PDF format', () => {
     expect(res.status).toBe(200);
     expect(res.headers['content-disposition']).toContain('filename="quarterly report.pdf"');
   }, 15000);
+
+  test('removes quotes and separators from download filename', async () => {
+    const res = await request(app)
+      .post('/convert')
+      .send({ markdown: '# Report', options: { filename: 'report";final' } });
+    expect(res.status).toBe(200);
+    expect(res.headers['content-disposition']).toContain('filename="reportfinal.pdf"');
+  }, 15000);
 });
 
 describe('POST /convert — validation', () => {
@@ -240,6 +248,32 @@ describe('POST /convert — validation', () => {
       .post('/convert')
       .send({ markdown: '   ' });
     expect(res.status).toBe(400);
+  });
+
+  test('returns 413 for markdown larger than 500KB', async () => {
+    const res = await request(app)
+      .post('/convert')
+      .send({ markdown: 'a'.repeat(500001) });
+    expect(res.status).toBe(413);
+    expect(res.body.error).toMatch(/too large/);
+  });
+});
+
+describe('POST /analyze — validation', () => {
+  test('returns 400 for empty markdown', async () => {
+    const res = await request(app)
+      .post('/analyze')
+      .send({ markdown: '   ' });
+    expect(res.status).toBe(400);
+    expect(res.body.error).toBe('Markdown content is empty');
+  });
+
+  test('returns 413 for markdown larger than 500KB', async () => {
+    const res = await request(app)
+      .post('/analyze')
+      .send({ markdown: 'a'.repeat(500001) });
+    expect(res.status).toBe(413);
+    expect(res.body.error).toMatch(/too large/);
   });
 });
 

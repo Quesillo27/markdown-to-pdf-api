@@ -1,6 +1,6 @@
 {
   "name": "markdown-to-pdf-api",
-  "version": "1.1.1",
+  "version": "1.1.2",
   "description": "REST API that converts Markdown to PDF or HTML with multiple CSS themes",
   "main": "src/server.js",
   "scripts": {

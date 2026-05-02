@@ -7,7 +7,8 @@ const { generatePdf, THEMES } = require('./pdfGenerator');
 const app = express();
 const PORT = process.env.PORT || 3000;
 const VALID_THEMES = Object.keys(THEMES);
-const APP_VERSION = '1.1.1';
+const APP_VERSION = '1.1.2';
+const MAX_MARKDOWN_LENGTH = 500_000;
 
 // Middleware
 app.use(express.json({ limit: '2mb' }));
@@ -39,25 +40,14 @@ app.get('/themes', (req, res) => {
  */
 app.post('/convert', async (req, res) => {
   try {
-    // Accept markdown from JSON body or raw text body
-    let markdown = '';
-    if (typeof req.body === 'string') {
-      markdown = req.body;
-    } else if (req.body && typeof req.body.markdown === 'string') {
-      markdown = req.body.markdown;
-    } else {
-      return res.status(400).json({
-        error: 'Missing markdown content',
-        hint: 'Send JSON { markdown: "..." } or Content-Type: text/markdown',
-      });
+    const validationResult = validateMarkdownRequest(req.body, {
+      hint: 'Send JSON { markdown: "..." } or Content-Type: text/markdown',
+    });
+    if (validationResult.status) {
+      return res.status(validationResult.status).json(validationResult.body);
     }
 
-    if (markdown.trim().length === 0) {
-      return res.status(400).json({ error: 'Markdown content is empty' });
-    }
-    if (markdown.length > 500_000) {
-      return res.status(413).json({ error: 'Markdown content too large (max 500KB)' });
-    }
+    const markdown = validationResult.markdown;
 
     // Determine options
     const options = (req.body && req.body.options) || {};
@@ -109,16 +99,12 @@ app.post('/convert', async (req, res) => {
  */
 app.post('/analyze', (req, res) => {
   try {
-    let markdown = '';
-    if (typeof req.body === 'string') {
-      markdown = req.body;
-    } else if (req.body && typeof req.body.markdown === 'string') {
-      markdown = req.body.markdown;
-    } else {
-      return res.status(400).json({ error: 'Missing markdown content' });
+    const validationResult = validateMarkdownRequest(req.body);
+    if (validationResult.status) {
+      return res.status(validationResult.status).json(validationResult.body);
     }
 
-    const stats = analyzeMarkdown(markdown);
+    const stats = analyzeMarkdown(validationResult.markdown);
     return res.json({ stats });
   } catch (err) {
     return res.status(500).json({ error: err.message });
@@ -159,8 +145,9 @@ function sanitizeDownloadFilename(filename) {
   }
 
   const cleaned = filename
-    .replace(/[\r\n]/g, ' ')
+    .replace(/[\x00-\x1f\x7f]/g, ' ')
     .replace(/[\\/]/g, '-')
+    .replace(/["';]/g, '')
     .replace(/\s+/g, ' ')
     .trim();
 
@@ -169,6 +156,41 @@ function sanitizeDownloadFilename(filename) {
   }
 
   return cleaned.toLowerCase().endsWith('.pdf') ? cleaned : `${cleaned}.pdf`;
+}
+
+function getMarkdownFromBody(body) {
+  if (typeof body === 'string') {
+    return body;
+  }
+
+  if (body && typeof body.markdown === 'string') {
+    return body.markdown;
+  }
+
+  return null;
+}
+
+function validateMarkdownRequest(body, options = {}) {
+  const markdown = getMarkdownFromBody(body);
+  if (markdown === null) {
+    return {
+      status: 400,
+      body: {
+        error: 'Missing markdown content',
+        ...(options.hint ? { hint: options.hint } : {}),
+      },
+    };
+  }
+
+  if (markdown.trim().length === 0) {
+    return { status: 400, body: { error: 'Markdown content is empty' } };
+  }
+
+  if (markdown.length > MAX_MARKDOWN_LENGTH) {
+    return { status: 413, body: { error: 'Markdown content too large (max 500KB)' } };
+  }
+
+  return { markdown };
 }
 
 // Start server
